@@ -207,11 +207,11 @@ class Tournament(object):
                             #If a player has more points, weigh them the highest so they get paired first
                             if int(self.playersDict[player]["Points"] / self.hysteresis) > int(points.split('_')[0]) or int(self.playersDict[opponent]["Points"] / self.hysteresis) > int(points.split('_')[0]):
                                 wgt = 25
-                            elif self.playersDict[player]['club'] == self.playersDict[opponent]["club"]:
+                            elif self.playersDict[player]['army'] == self.playersDict[opponent]["army"]:
                                 wgt = 8
                             if self.playersDict[player]['town'] == self.playersDict[opponent]["town"]:
                                 wgt -= 8
-                            elif self.playersDict[player]['army'] == self.playersDict[opponent]["army"]:
+                            elif self.playersDict[player]['club'] == self.playersDict[opponent]["club"]:
                                 wgt -= 2
                             #Create edge
                             bracketGraph.add_edge(player, opponent, weight=wgt)
