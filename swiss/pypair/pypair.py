@@ -47,6 +47,8 @@ class Tournament(object):
         self.tablesOut = []
         self.tables = {}
         self.total_tables = total_tables
+        self.byePoints = drawPoints
+        self.byePlayer = None
 
     def dumpTournamentData(self):
         return {
@@ -120,9 +122,12 @@ class Tournament(object):
 
     def pairRound( self, forcePair=False ):
         if self.total_tables == None:
-                self.total_tables = int((len(self.playersDict) + 1)/2)
+                self.total_tables = int(len(self.playersDict)/2)
+                #self.total_tables = int((len(self.playersDict) + 1)/2)
         for i in range(self.total_tables):
                 self.tables[i+1] = None
+        self.byePlayer = None
+
         """
         Process overview:
             1.) Create lists of players with each point value
@@ -201,7 +206,7 @@ class Tournament(object):
                 #Generate pairings from the created graph
                 pairings = nx.max_weight_matching(bracketGraph)
                 
-                printdbg( pairings, 3 )
+                printdbg(pairings, 3)
                 
                 #Actually pair the players based on the matching we found
                 for p in pairings:
@@ -312,11 +317,9 @@ class Tournament(object):
     def assignBye( self, p1, reason="bye" ):
         printdbg( "%s got the bye"%p1, 2)
         self.playersDict[p1]["Results"].append([0,0,0])
-        
         self.playersDict[p1]["Opponents"].append("bye")
-        
-        #Add points for "winning"
-        self.playersDict[p1]["Points"] += byePoints
+        self.playersDict[p1]["Points"] += self.byePoints
+        self.byePlayer = p1
         
     def reportMatch( self, table, result ):
         #print(result)
