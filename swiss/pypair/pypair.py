@@ -49,6 +49,7 @@ class Tournament(object):
         self.total_tables = total_tables
         self.byePoints = drawPoints
         self.byePlayer = None
+        self.hysteresis = 2
 
     def dumpTournamentData(self):
         return {
@@ -62,7 +63,8 @@ class Tournament(object):
             'pointTotals': self.pointTotals,
             'tablesOut': self.tablesOut,
             'tables': self.tables,
-            'total_tables': self.total_tables
+            'total_tables': self.total_tables,
+            'hysteresis': self.hysteresis
 	}
 
     def loadTournamentData(self, data):
@@ -77,8 +79,9 @@ class Tournament(object):
         self.tablesOut = data['tablesOut']
         self.tables = data['tables']
         self.total_tables = data['total_tables']
+        self.hysteresis = data['hysteresis']
         
-    def addPlayer( self, IDNumber, playerName, fixedSeating=False ):
+    def addPlayer( self, IDNumber, playerName, fixedSeating=False, club="Default", army="Default", town="Default" ):
         
         '''
         Holds player data that are in the event.
@@ -99,6 +102,9 @@ class Tournament(object):
                                         "tables": {},
                                         "Points":0,
                                         "OMW%": 0.0,
+					"club": club,
+					"army": army,
+                                        "town": town,
                                         "Fixed Seating":fixedSeating}
     
     def loadPlayersCSV( self, pathToLoad ):
@@ -157,19 +163,20 @@ class Tournament(object):
             #Add all players to pointLists
             for player in self.playersDict:
                 info = self.playersDict[player]
+                pts_rounded = int(info['Points'] / self.hysteresis)
                 #If this point amount isn't in the list, add it
-                if "%s_1"%info['Points'] not in pointLists:
-                    pointLists["%s_1"%info['Points']] = []
-                    self.countPoints[info['Points']] = 1
+                if "%s_1"%pts_rounded not in pointLists:
+                    pointLists["%s_1"%pts_rounded] = []
+                    self.countPoints[pts_rounded] = 1
                 
                 #Breakers the players into groups of their current points up to the max group allowed.
                 #Smaller groups mean faster calculations
-                if len(pointLists["%s_%s"%(info['Points'], self.countPoints[info['Points']])]) > self.MaxGroup:
-                    self.countPoints[info['Points']] += 1
-                    pointLists["%s_%s"%(info['Points'], self.countPoints[info['Points']])] = []
+                if len(pointLists["%s_%s"%(pts_rounded, self.countPoints[pts_rounded])]) > self.MaxGroup:
+                    self.countPoints[pts_rounded] += 1
+                    pointLists["%s_%s"%(pts_rounded, self.countPoints[pts_rounded])] = []
                 
                 #Add our player to the correct group
-                pointLists["%s_%s"%(info['Points'], self.countPoints[info['Points']])].append(player)
+                pointLists["%s_%s"%(pts_rounded, self.countPoints[pts_rounded])].append(player)
                 
             #Add all points in use to pointTotals
             for points in pointLists:
@@ -196,10 +203,16 @@ class Tournament(object):
                     for opponent in bracketGraph.nodes():
                         if opponent not in self.playersDict[player]["Opponents"] and player != opponent:
                             #Weight edges randomly between 1 and 9 to ensure pairings are not always the same with the same list of players
-                            wgt = random.randint(1, 9)
+                            wgt = random.randint(10, 20)
                             #If a player has more points, weigh them the highest so they get paired first
-                            if self.playersDict[player]["Points"] > int(points.split('_')[0]) or self.playersDict[opponent]["Points"] > int(points.split('_')[0]):
-                                wgt = 10
+                            if int(self.playersDict[player]["Points"] / self.hysteresis) > int(points.split('_')[0]) or int(self.playersDict[opponent]["Points"] / self.hysteresis) > int(points.split('_')[0]):
+                                wgt = 25
+                            elif self.playersDict[player]['club'] == self.playersDict[opponent]["club"]:
+                                wgt = 8
+                            if self.playersDict[player]['town'] == self.playersDict[opponent]["town"]:
+                                wgt -= 8
+                            elif self.playersDict[player]['army'] == self.playersDict[opponent]["army"]:
+                                wgt -= 2
                             #Create edge
                             bracketGraph.add_edge(player, opponent, weight=wgt)
                 
